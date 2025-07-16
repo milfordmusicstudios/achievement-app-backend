@@ -33,6 +33,33 @@ app.get("/users", (req, res) => {
   res.json(db.users || []);
 });
 
+const fs = require("fs");
+
+app.post("/users", (req, res) => {
+  const db = require("./db.json");
+  const users = db.users || [];
+
+  const newUser = req.body;
+
+  // Optionally check if user with same email exists
+  if (users.find(u => u.email === newUser.email)) {
+    return res.status(409).json({ error: "User already exists" });
+  }
+
+  users.push(newUser);
+
+  const updatedDB = { ...db, users };
+
+  fs.writeFile("./db.json", JSON.stringify(updatedDB, null, 2), (err) => {
+    if (err) {
+      console.error("Failed to save user:", err);
+      return res.status(500).json({ error: "Could not save user" });
+    }
+
+    res.status(201).json(newUser);
+  });
+});
+
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
