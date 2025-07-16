@@ -60,6 +60,27 @@ app.post("/users", (req, res) => {
   });
 });
 
+const fs = require("fs");
+
+// Required to read body from POST requests
+app.use(express.json());
+
+app.post("/login", (req, res) => {
+  const { email, password } = req.body;
+  const db = JSON.parse(fs.readFileSync("./db.json", "utf-8"));
+  const users = db.users || [];
+
+  const user = users.find(
+    (u) => u.email === email && u.password === password
+  );
+
+  if (user) {
+    res.json(user);
+  } else {
+    res.status(401).json({ error: "Invalid credentials" });
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
