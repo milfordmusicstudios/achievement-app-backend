@@ -27,6 +27,12 @@ app.post("/upload-avatar", upload.single("avatar"), (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No file uploaded." });
   res.json({ url: `/uploads/${req.file.filename}` });
 });
+const db = require("./db.json");
+
+app.get("/users", (req, res) => {
+  res.json(db.users || []);
+});
+
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
