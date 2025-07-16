@@ -67,6 +67,11 @@ app.post("/login", (req, res) => {
     res.status(401).json({ error: "Invalid credentials" });
   }
 });
+app.get("/logs", (req, res) => {
+  const db = JSON.parse(fs.readFileSync("./db.json", "utf-8"));
+  const logs = db.logs || [];
+  res.json(logs);
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
