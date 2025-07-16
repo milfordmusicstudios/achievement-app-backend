@@ -1,24 +1,19 @@
-
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001; // ✅ Fix: works on Render too
 
 app.use(cors());
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = Date.now() + "_" + file.originalname;
-    cb(null, uniqueName);
-  }
+  destination: (req, file, cb) => cb(null, "uploads/"),
+  filename: (req, file, cb) => cb(null, Date.now() + "_" + file.originalname)
 });
 
 const upload = multer({ storage });
@@ -27,21 +22,18 @@ app.post("/upload-avatar", upload.single("avatar"), (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No file uploaded." });
   res.json({ url: `/uploads/${req.file.filename}` });
 });
-const db = require("./db.json");
 
 app.get("/users", (req, res) => {
+  const db = JSON.parse(fs.readFileSync("./db.json", "utf-8"));
   res.json(db.users || []);
 });
 
-const fs = require("fs");
-
 app.post("/users", (req, res) => {
-  const db = require("./db.json");
+  const db = JSON.parse(fs.readFileSync("./db.json", "utf-8"));
   const users = db.users || [];
 
   const newUser = req.body;
 
-  // Optionally check if user with same email exists
   if (users.find(u => u.email === newUser.email)) {
     return res.status(409).json({ error: "User already exists" });
   }
@@ -60,11 +52,6 @@ app.post("/users", (req, res) => {
   });
 });
 
-const fs = require("fs");
-
-// Required to read body from POST requests
-app.use(express.json());
-
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
   const db = JSON.parse(fs.readFileSync("./db.json", "utf-8"));
@@ -81,7 +68,6 @@ app.post("/login", (req, res) => {
   }
 });
 
-
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
