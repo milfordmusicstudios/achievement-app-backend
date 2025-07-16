@@ -1,11 +1,18 @@
+
+const { createClient } = require('@supabase/supabase-js');
+
+const SUPABASE_URL = "https://tpcjdgucyrqrzuqvshki.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwY2pkZ3VjeXJxcnp1cXZzaGtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3MDE5OTksImV4cCI6MjA2ODI3Nzk5OX0.XGHcwyeTzYje6cjd3PHQrr7CyyEcaoRB4GyTYN1fDqo";
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
-const fs = require("fs");
 
 const app = express();
-const PORT = process.env.PORT || 3001; // ✅ Fix: works on Render too
+const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
@@ -23,75 +30,63 @@ app.post("/upload-avatar", upload.single("avatar"), (req, res) => {
   res.json({ url: `/uploads/${req.file.filename}` });
 });
 
-app.get("/users", (req, res) => {
-  const db = JSON.parse(fs.readFileSync("./db.json", "utf-8"));
-  res.json(db.users || []);
+app.get("/users", async (req, res) => {
+  const { data, error } = await supabase.from("users").select("*");
+  if (error) return res.status(500).json({ error });
+  res.json(data);
 });
 
-app.post("/users", (req, res) => {
-  const db = JSON.parse(fs.readFileSync("./db.json", "utf-8"));
-  const users = db.users || [];
-
+app.post("/users", async (req, res) => {
   const newUser = req.body;
 
-  if (users.find(u => u.email === newUser.email)) {
-    return res.status(409).json({ error: "User already exists" });
-  }
+  const { data: existing, error: checkError } = await supabase
+    .from("users")
+    .select("*")
+    .eq("email", newUser.email);
 
-  users.push(newUser);
+  if (checkError) return res.status(500).json({ error: checkError.message });
+  if (existing.length > 0) return res.status(409).json({ error: "User already exists" });
 
-  const updatedDB = { ...db, users };
+  const { data, error } = await supabase.from("users").insert(newUser).select();
+  if (error) return res.status(500).json({ error: error.message });
 
-  fs.writeFile("./db.json", JSON.stringify(updatedDB, null, 2), (err) => {
-    if (err) {
-      console.error("Failed to save user:", err);
-      return res.status(500).json({ error: "Could not save user" });
-    }
-
-    res.status(201).json(newUser);
-  });
+  res.status(201).json(data[0]);
 });
 
-app.post("/login", (req, res) => {
+app.post("/login", async (req, res) => {
   const { email, password } = req.body;
-  const db = JSON.parse(fs.readFileSync("./db.json", "utf-8"));
-  const users = db.users || [];
 
-  const user = users.find(
-    (u) => u.email === email && u.password === password
-  );
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("email", email)
+    .eq("password", password);
 
-  if (user) {
-    res.json(user);
-  } else {
-    res.status(401).json({ error: "Invalid credentials" });
+  if (error || !data || data.length === 0) {
+    return res.status(403).json({ error: "Invalid credentials" });
   }
-});
-app.get("/logs", (req, res) => {
-  const db = JSON.parse(fs.readFileSync("./db.json", "utf-8"));
-  const logs = db.logs || [];
-  res.json(logs);
+
+  res.json(data[0]);
 });
 
-// ✅ ADD THIS PATCH ROUTE BELOW ⬇
-app.patch("/users/:id", (req, res) => {
+app.patch("/users/:id", async (req, res) => {
   const userId = req.params.id;
   const updates = req.body;
 
-  const db = JSON.parse(fs.readFileSync("./db.json", "utf-8"));
-  const users = db.users || [];
+  const { data, error } = await supabase
+    .from("users")
+    .update(updates)
+    .eq("id", userId)
+    .select();
 
-  const userIndex = users.findIndex(u => u.id === userId);
-  if (userIndex === -1) return res.status(404).json({ error: "User not found" });
-
-  users[userIndex] = { ...users[userIndex], ...updates };
-
-  const updatedDB = { ...db, users };
-  fs.writeFileSync("./db.json", JSON.stringify(updatedDB, null, 2));
-  res.json(users[userIndex]);
+  if (error) return res.status(500).json({ error });
+  res.json(data[0]);
 });
 
-// ✅ DO NOT PUT IT BELOW THIS
+app.get("/logs", (req, res) => {
+  res.json([]);
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
