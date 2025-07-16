@@ -73,6 +73,25 @@ app.get("/logs", (req, res) => {
   res.json(logs);
 });
 
+// ✅ ADD THIS PATCH ROUTE BELOW ⬇
+app.patch("/users/:id", (req, res) => {
+  const userId = req.params.id;
+  const updates = req.body;
+
+  const db = JSON.parse(fs.readFileSync("./db.json", "utf-8"));
+  const users = db.users || [];
+
+  const userIndex = users.findIndex(u => u.id === userId);
+  if (userIndex === -1) return res.status(404).json({ error: "User not found" });
+
+  users[userIndex] = { ...users[userIndex], ...updates };
+
+  const updatedDB = { ...db, users };
+  fs.writeFileSync("./db.json", JSON.stringify(updatedDB, null, 2));
+  res.json(users[userIndex]);
+});
+
+// ✅ DO NOT PUT IT BELOW THIS
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
