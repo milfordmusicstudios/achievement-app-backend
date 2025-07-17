@@ -35,11 +35,14 @@ app.get("/users", async (req, res) => {
 
   const { data, error } = await supabase.from("users").select("*");
 
-  console.log("🧠 Supabase data:", data);
-  console.log("❌ Supabase error:", error);
+  if (error) {
+    console.error("❌ Supabase error:", error);
+    return res.status(500).json({ error });
+  }
 
-  if (error) return res.status(500).json({ error });
-  res.json(data);
+  console.log("🧠 Raw data from Supabase:", data);
+
+  res.json(data); // <— not filtering anything
 });
 
 app.post("/users", async (req, res) => {
