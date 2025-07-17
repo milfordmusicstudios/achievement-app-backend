@@ -31,7 +31,13 @@ app.post("/upload-avatar", upload.single("avatar"), (req, res) => {
 });
 
 app.get("/users", async (req, res) => {
+  console.log("📣 GET /users route hit");
+
   const { data, error } = await supabase.from("users").select("*");
+
+  console.log("🧠 Supabase data:", data);
+  console.log("❌ Supabase error:", error);
+
   if (error) return res.status(500).json({ error });
   res.json(data);
 });
